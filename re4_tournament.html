@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RE4 Tournament: Mission Log</title>
+    <style>
+        :root {
+            /* Palette */
+            --bg-body: #050505;
+            --bg-card: #0f0f11;
+            --bg-input: #161618;
+            
+            --text-main: #e0e0e0;
+            --text-muted: #6e6e73;
+            
+            --accent-red: #bb0a1e;       
+            --accent-red-glow: rgba(187, 10, 30, 0.6);
+            --accent-gold: #cfa85e;      
+            --accent-green: #2ecc71;
+            
+            --border-color: #2c2c2e;
+            
+            --anim-speed: 0.3s;
+            --font-display: 'Times New Roman', serif;
+            --font-ui: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-body);
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- HEADER --- */
+        h1 {
+            font-family: var(--font-display);
+            color: var(--accent-red);
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            margin-bottom: 60px;
+            text-shadow: 0 0 20px var(--accent-red-glow);
+            position: relative;
+            padding-bottom: 20px;
+        }
+        
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 2px;
+            background: var(--accent-red);
+            box-shadow: 0 0 10px var(--accent-red);
+        }
+
+        /* --- GRID --- */
+        .match-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 40px;
+            width: 100%;
+            max-width: 1200px;
+            align-items: start;
+        }
+
+        .divider {
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, var(--border-color), transparent);
+            align-self: stretch;
+        }
+
+        /* --- PLAYER CARD --- */
+        .player-card {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            transition: transform var(--anim-speed), border-color var(--anim-speed);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-card:hover { border-color: #444; transform: translateY(-5px); }
+        .player-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--accent-gold); opacity: 0.5; }
+
+        .player-name {
+            width: 100%; background: transparent; border: none; border-bottom: 2px solid transparent;
+            color: #fff; font-family: var(--font-display); font-size: 2rem; margin-bottom: 30px;
+            text-align: center; transition: all var(--anim-speed); outline: none; padding-bottom: 5px;
+        }
+        .player-name:focus { border-bottom-color: var(--accent-red); text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
+
+        .score-box { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .score-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 5px; }
+
+        .big-score-wrapper { cursor: pointer; display: inline-block; transition: all 0.3s ease; position: relative; }
+        .big-score {
+            font-size: 3.5rem; font-weight: 300; color: #fff; font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.1); transition: filter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .blur-active { filter: blur(25px); user-select: none; }
+        .big-score-wrapper:hover .blur-active { filter: blur(15px); }
+        .eye-icon {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 1.5rem; color: var(--accent-gold); opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .blur-active + .eye-icon { opacity: 0.7; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .stat-item { background: var(--bg-input); padding: 15px; border-radius: 4px; text-align: center; border: 1px solid transparent; transition: border-color 0.3s; }
+        .stat-item:hover { border-color: #333; }
+        .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-value { font-size: 1.2rem; font-weight: 600; color: var(--text-main); }
+        .text-gold { color: var(--accent-gold); }
+        .text-red { color: #ff5555; }
+
+        .chapter-select {
+            width: 100%; padding: 15px; background: var(--bg-input); color: var(--text-muted);
+            border: 1px solid var(--border-color); font-family: var(--font-ui); font-size: 0.9rem;
+            cursor: pointer; transition: all var(--anim-speed); outline: none; text-align-last: center; border-radius: 4px;
+        }
+        .chapter-select:hover { color: #fff; border-color: var(--accent-red); box-shadow: 0 0 15px var(--accent-red-glow); }
+
+        .rank-badge { display: inline-block; font-family: var(--font-display); font-size: 2.5rem; font-weight: bold; font-style: italic; margin-top: 10px; }
+        .rank-s { color: #ffd700; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+        .rank-a { color: #c0c0c0; text-shadow: 0 0 10px rgba(192, 192, 192, 0.3); }
+        .rank-b { color: #cd7f32; }
+        .rank-c { color: #444; }
+
+        /* --- OVERLAY & MODALS --- */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            z-index: 900; opacity: 0; visibility: hidden; transition: all 0.4s ease;
+        }
+        .overlay.active { opacity: 1; visibility: visible; }
+
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -40%);
+            width: 420px; background: #121214; border: 1px solid #333; padding: 40px;
+            z-index: 1000; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            border-radius: 6px;
+        }
+        .modal.active { opacity: 1; visibility: visible; transform: translate(-50%, -50%); }
+        .modal-title { text-align: center; font-family: var(--font-display); color: var(--accent-gold); font-size: 1.8rem; margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+
+        /* --- HISTORY LOG STYLES --- */
+        .history-modal {
+            width: 1000px; /* Wider for 3 columns */
+            max-width: 95%;
+            padding: 30px;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr 250px; /* Side - Table - Side */
+            gap: 20px;
+            height: 60vh;
+        }
+
+        .history-center-col {
+            overflow-y: auto;
+            border: 1px solid #333;
+            background: #0f0f11;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-ui);
+        }
+        .history-table th {
+            background: #1a1a1c;
+            color: var(--text-muted);
+            padding: 15px;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .history-table td {
+            padding: 12px;
+            border-bottom: 1px solid #222;
+            text-align: center;
+            font-size: 1rem;
+            cursor: default;
+        }
+        .history-table tr { transition: background 0.2s; }
+        .history-table tr:hover { background: #222; cursor: crosshair; }
+        
+        /* Side Detail Panels */
+        .history-side-panel {
+            background: #121214;
+            border: 1px solid #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        .history-side-panel.active { opacity: 1; border-color: #555; }
+        
+        .side-title { color: var(--accent-gold); font-family: var(--font-display); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; text-align: center; }
+        
+        .detail-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: #aaa; border-bottom: 1px solid #222; padding: 8px 0; }
+        .detail-row span:last-child { color: #fff; font-weight: bold; }
+        .detail-row.hl span:last-child { color: var(--accent-gold); }
+        .detail-row.bad span:last-child { color: var(--accent-red); }
+
+        /* Win/Loss Colors */
+        .tbl-win { color: var(--accent-green); font-weight: bold; background: rgba(46, 204, 113, 0.05); }
+        .tbl-loss { color: var(--accent-red); opacity: 0.7; }
+        .tbl-draw { color: var(--text-muted); }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+
+        /* --- FORM CONTROLS --- */
+        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .input-group label { color: var(--text-muted); text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; }
+        .time-inputs { display: flex; align-items: center; gap: 8px; }
+        .sep { font-size: 1.5rem; color: #444; padding-bottom: 5px; }
+
+        input[type="number"] {
+            background: transparent; border: none; border-bottom: 1px solid #444; color: #fff;
+            font-family: var(--font-ui); font-size: 1.4rem; text-align: right; width: 70px; padding: 5px;
+            transition: all 0.3s; -moz-appearance: textfield;
+        }
+        input[type="number"]:focus { outline: none; border-bottom-color: var(--accent-red); background: linear-gradient(to top, rgba(187, 10, 30, 0.1), transparent); }
+
+        .btn-container { display: flex; gap: 15px; margin-top: 40px; }
+        .btn {
+            flex: 1; padding: 15px; background: transparent; border: 1px solid #444; color: #aaa;
+            font-family: var(--font-display); text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .btn::after { content: ''; position: absolute; top: 0; left: 0; width: 0%; height: 100%; background: rgba(255, 255, 255, 0.05); transition: width 0.3s; z-index: 0; }
+        .btn span { position: relative; z-index: 1; }
+        .btn:hover::after { width: 100%; }
+        .btn:hover { color: #fff; border-color: #888; }
+        .btn-save { border-color: var(--accent-red); color: var(--accent-red); }
+        .btn-save:hover { background: var(--accent-red); color: #fff; box-shadow: 0 0 20px var(--accent-red-glow); }
+        
+        .actions-bar { margin-top: 50px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .main-btn { padding: 20px 40px; font-size: 1.1rem; border: 1px solid var(--accent-gold); color: var(--accent-gold); min-width: 250px; }
+        .main-btn:hover { background: var(--accent-gold); color: #000; box-shadow: 0 0 30px rgba(197, 160, 89, 0.4); }
+        .blur-btn { padding: 20px 20px; border: 1px solid #555; color: #777; }
+        .blur-btn:hover { border-color: #fff; color: #fff; }
+
+        .preview-box { margin-top: 30px; text-align: center; color: #666; font-size: 0.9rem; transition: color 0.3s; }
+        .preview-box.highlight { color: #fff; }
+
+        /* --- VICTORY SCREEN --- */
+        .victory-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 1s cubic-bezier(0.5, 0, 0.1, 1), transform 1s cubic-bezier(0.5, 0, 0.1, 1); transform: scale(1.05); 
+        }
+        .victory-overlay.visible { opacity: 1; visibility: visible; pointer-events: all; transform: scale(1); }
+        .victory-overlay.closing { opacity: 0; transform: scale(0.95); pointer-events: none; }
+
+        .victory-content { z-index: 2002; text-align: center; position: relative; }
+        .victory-status { font-family: var(--font-ui); font-size: 1.5rem; color: var(--accent-red); letter-spacing: 5px; animation: pulse 1s infinite alternate; margin-bottom: 20px; }
+        @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; text-shadow: 0 0 15px var(--accent-red); } }
+
+        .winner-title, .winner-name, .winner-score { transition: opacity 0.5s ease, transform 0.8s ease; }
+        .winner-title { font-family: var(--font-display); font-size: 1.2rem; color: #888; letter-spacing: 4px; margin-bottom: 10px; opacity: 0; transform: translateY(20px); }
+        .winner-name { font-family: var(--font-display); font-size: 5rem; color: var(--accent-gold); text-transform: uppercase; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 50px var(--accent-gold-glow); opacity: 0; transform: scale(0.8); }
+        .winner-score { font-family: var(--font-ui); font-size: 1.5rem; color: #fff; opacity: 0; }
+
+        .victory-overlay.reveal .winner-title { opacity: 1; transform: translateY(0); }
+        .victory-overlay.reveal .winner-name { opacity: 1; transform: scale(1); }
+        .victory-overlay.reveal .winner-score { opacity: 1; }
+        .victory-overlay.reveal .victory-status { display: none; }
+        .force-hide { opacity: 0 !important; transform: scale(0.9) !important; transition: none !important; }
+
+        #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2001; pointer-events: none; }
+        .close-victory-btn { margin-top: 50px; padding: 15px 40px; background: transparent; border: 1px solid #444; color: #666; font-family: var(--font-display); cursor: pointer; text-transform: uppercase; letter-spacing: 2px; opacity: 0; transition: all 0.5s; }
+        .close-victory-btn:hover { border-color: #fff; color: #fff; }
+        .victory-overlay.reveal .close-victory-btn { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <h1>Resident Evil 4 <span style="font-size:0.5em; color:#666; vertical-align: middle;">TOURNAMENT</span></h1>
+
+    <div class="match-container">
+        <div class="player-card">
+            <input type="text" id="p1-name" class="player-name" value="Leon">
+            <div class="score-box">
+                <div class="score-label">Total Score</div>
+                <div class="big-score-wrapper" onclick="toggleBlur('p1-score')">
+                    <div class="big-score" id="p1-score">0</div>
+                    <div class="eye-icon">👁</div>
+                </div>
+                <div class="rank-badge" id="p1-rank">-</div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item"><div class="stat-label">Time</div><div class="stat-value" id="p1-time">00:00</div></div>
+                <div class="stat-item"><div class="stat-label">Accuracy</div><div class="stat-value text-gold" id="p1-acc">0%</div></div>
+                <div class="stat-item"><div class="stat-label">Kills</div><div class="stat-value" id="p1-kills">0</div></div>
+                <div class="stat-item"><div class="stat-label">Deaths / DMG</div><div class="stat-value text-red"><span id="p1-deaths">0</span> / <span id="p1-dmg">0</span></div></div>
+            </div>
+            <select class="chapter-select" id="p1-select" onchange="openModal(1, this.value)"><option value="" disabled selected>+ ВНЕСТИ РЕЗУЛЬТАТ</option></select>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="player-card">
+            <input type="text" id="p2-name" class="player-name" value="Krauser">
+            <div class="score-box">
+                <div class="score-label">Total Score</div>
+                <div class="big-score-wrapper" onclick="toggleBlur('p2-score')">
+                    <div class="big-score" id="p2-score">0</div>
+                    <div class="eye-icon">👁</div>
+                </div>
+                <div class="rank-badge" id="p2-rank">-</div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item"><div class="stat-label">Time</div><div class="stat-value" id="p2-time">00:00</div></div>
+                <div class="stat-item"><div class="stat-label">Accuracy</div><div class="stat-value text-gold" id="p2-acc">0%</div></div>
+                <div class="stat-item"><div class="stat-label">Kills</div><div class="stat-value" id="p2-kills">0</div></div>
+                <div class="stat-item"><div class="stat-label">Deaths / DMG</div><div class="stat-value text-red"><span id="p2-deaths">0</span> / <span id="p2-dmg">0</span></div></div>
+            </div>
+            <select class="chapter-select" id="p2-select" onchange="openModal(2, this.value)"><option value="" disabled selected>+ ВНЕСТИ РЕЗУЛЬТАТ</option></select>
+        </div>
+    </div>
+
+    <div class="actions-bar">
+        <button class="btn blur-btn" onclick="toggleAllBlur()"><span>👁 СКРЫТЬ СЧЕТ</span></button>
+        <button class="btn blur-btn" onclick="openHistory()"><span>📊 ИСТОРИЯ БОЯ</span></button>
+        <button class="btn main-btn" onclick="triggerVictorySequence()"><span>ОБЪЯВИТЬ ПОБЕДИТЕЛЯ</span></button>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="closeModal()"></div>
+    <div class="modal" id="modal">
+        <div class="modal-title" id="modal-title">CHAPTER 1</div>
+        <div class="input-group">
+            <label>Время (Мин : Сек)</label>
+            <div class="time-inputs">
+                <input type="number" id="in-min" placeholder="00" oninput="sanitizeInput(this, 0, 999); updatePreview()" onblur="padZero(this)" onkeydown="preventMinus(event)">
+                <span class="sep">:</span>
+                <input type="number" id="in-sec" placeholder="00" oninput="sanitizeInput(this, 0, 59); updatePreview()" onblur="padZero(this)" onkeydown="preventMinus(event)">
+            </div>
+        </div>
+        <div class="input-group"><label>Убито врагов</label><input type="number" id="in-kills" oninput="sanitizeInput(this); updatePreview()" onkeydown="preventMinus(event)"></div>
+        <div class="input-group"><label>Точность (%)</label><input type="number" id="in-acc" step="0.1" oninput="sanitizeInput(this, 0, 100); updatePreview()" onkeydown="preventMinus(event)"></div>
+        <div class="input-group"><label class="text-red">Смерти</label><input type="number" id="in-deaths" style="color:#ff5555" oninput="sanitizeInput(this); updatePreview()" onkeydown="preventMinus(event)"></div>
+        <div class="input-group"><label class="text-red">Получен урон</label><input type="number" id="in-dmg" style="color:#ff5555" oninput="sanitizeInput(this); updatePreview()" onkeydown="preventMinus(event)"></div>
+        <div class="preview-box" id="preview-box">Предварительный итог: <span id="preview-val" style="font-weight:bold; color:var(--text-main);">0</span></div>
+        <div class="btn-container">
+            <button class="btn" onclick="closeModal()"><span>ОТМЕНА</span></button>
+            <button class="btn btn-save" onclick="saveData()"><span>СОХРАНИТЬ</span></button>
+        </div>
+    </div>
+
+    <div class="overlay" id="history-overlay" onclick="closeHistory()"></div>
+    <div class="modal history-modal" id="history-modal">
+        <div class="modal-title">MISSION LOG</div>
+        
+        <div class="history-grid">
+            <div class="history-side-panel" id="side-p1">
+                <div class="side-title" id="side-p1-name">LEON</div>
+                <div id="side-p1-content">
+                    <div style="text-align:center; color:#555; margin-top:50px;">HOVER OVER A CHAPTER</div>
+                </div>
+            </div>
+
+            <div class="history-center-col">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;">CHAPTER</th>
+                            <th>P1 SCORE</th>
+                            <th>P2 SCORE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="history-side-panel" id="side-p2">
+                <div class="side-title" id="side-p2-name">KRAUSER</div>
+                <div id="side-p2-content">
+                    <div style="text-align:center; color:#555; margin-top:50px;">HOVER OVER A CHAPTER</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn" onclick="closeHistory()"><span>CLOSE</span></button>
+        </div>
+    </div>
+
+    <div class="victory-overlay" id="victory-overlay">
+        <canvas id="confetti-canvas"></canvas>
+        <div class="victory-content">
+            <div id="loading-text" class="victory-status">PROCESSING BATTLE DATA...</div>
+            <div id="winner-title" class="winner-title">TOURNAMENT CHAMPION</div>
+            <div id="winner-name" class="winner-name">LEON</div>
+            <div id="winner-score" class="winner-score">Score: 120,000</div>
+            <button class="close-victory-btn" onclick="closeVictory()">CLOSE REPORT</button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG
+        const RULES = { SCORE_KILL: 50, SCORE_ACC: 50, PENALTY_DEATH: 1500, PENALTY_DMG: 100, PAR_TIME: 25, TIME_BONUS: 100 };
+        let db = { 1: { chapters: {} }, 2: { chapters: {} } };
+        let currentP = null;
+        let currentCh = null;
+
+        window.onload = () => {
+            const list = Array.from({length: 16}, (_, i) => `Глава ${i+1}`);
+            [1, 2].forEach(p => {
+                const sel = document.getElementById(`p${p}-select`);
+                list.forEach(ch => {
+                    let opt = document.createElement('option');
+                    opt.value = ch; opt.text = ch; sel.add(opt);
+                });
+            });
+        };
+
+        // --- BLUR / SPOILER LOGIC ---
+        function toggleBlur(id) { document.getElementById(id).classList.toggle('blur-active'); }
+        function toggleAllBlur() {
+            const p1 = document.getElementById('p1-score');
+            const p2 = document.getElementById('p2-score');
+            if (p1.classList.contains('blur-active') && p2.classList.contains('blur-active')) {
+                p1.classList.remove('blur-active'); p2.classList.remove('blur-active');
+            } else {
+                p1.classList.add('blur-active'); p2.classList.add('blur-active');
+            }
+        }
+
+        // --- ANIMATION UTILS ---
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerText = Math.floor(progress * (end - start) + start).toLocaleString();
+                if (progress < 1) window.requestAnimationFrame(step);
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // --- INPUT LOGIC ---
+        function preventMinus(e) { if(e.key === '-' || e.key === 'Subtract') e.preventDefault(); }
+        function sanitizeInput(el, min=0, max=null) {
+            let val = parseFloat(el.value);
+            if(val < min) el.value = min;
+            if(max !== null && val > max) el.value = max;
+        }
+        function padZero(el) {
+            let val = parseInt(el.value);
+            if(!isNaN(val) && val >= 0 && val < 10) el.value = '0' + val;
+        }
+
+        function getDataFromInputs() {
+            return {
+                min: Math.max(0, parseInt(document.getElementById('in-min').value)||0),
+                sec: Math.max(0, Math.min(59, parseInt(document.getElementById('in-sec').value)||0), 0),
+                kills: Math.max(0, parseInt(document.getElementById('in-kills').value)||0),
+                acc: Math.max(0, Math.min(100, parseFloat(document.getElementById('in-acc').value)||0), 0),
+                deaths: Math.max(0, parseInt(document.getElementById('in-deaths').value)||0),
+                dmg: Math.max(0, parseInt(document.getElementById('in-dmg').value)||0)
+            };
+        }
+
+        function getChapterScore(d) {
+            if(!d) return 0;
+            let s = 0;
+            s += (d.kills||0) * RULES.SCORE_KILL;
+            s += (d.acc||0) * RULES.SCORE_ACC;
+            s -= (d.deaths||0) * RULES.PENALTY_DEATH;
+            s -= (d.dmg||0) * RULES.PENALTY_DMG;
+            const totSec = ((d.min||0)*60)+(d.sec||0);
+            if(totSec===0 && (d.kills||0)===0 && (d.acc||0)===0) return 0;
+            const diff = (RULES.PAR_TIME*60) - totSec;
+            s += (diff/60) * RULES.TIME_BONUS;
+            return Math.round(s);
+        }
+
+        // --- EDIT MODAL ---
+        function openModal(pid, ch) {
+            currentP = pid; currentCh = ch;
+            const d = db[pid].chapters[ch] || {};
+            document.getElementById('modal-title').innerText = ch.toUpperCase();
+            
+            const minEl = document.getElementById('in-min'); minEl.value = d.min !== undefined ? d.min : ''; padZero(minEl);
+            const secEl = document.getElementById('in-sec'); secEl.value = d.sec !== undefined ? d.sec : ''; padZero(secEl);
+
+            document.getElementById('in-kills').value = d.kills !== undefined ? d.kills : '';
+            document.getElementById('in-acc').value = d.acc !== undefined ? d.acc : '';
+            document.getElementById('in-deaths').value = d.deaths !== undefined ? d.deaths : '';
+            document.getElementById('in-dmg').value = d.dmg !== undefined ? d.dmg : '';
+
+            updatePreview();
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('modal').classList.add('active');
+            document.getElementById(`p${pid}-select`).value = "";
+        }
+
+        function closeModal() {
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function updatePreview() {
+            const val = getChapterScore(getDataFromInputs());
+            const box = document.getElementById('preview-val');
+            box.innerText = val.toLocaleString();
+            const container = document.getElementById('preview-box');
+            container.classList.add('highlight');
+            setTimeout(() => container.classList.remove('highlight'), 200);
+        }
+
+        function saveData() {
+            if(!currentP || !currentCh) return;
+            db[currentP].chapters[currentCh] = getDataFromInputs();
+            recalcPlayer(currentP);
+            closeModal();
+        }
+
+        function recalcPlayer(pid) {
+            const chs = db[pid].chapters;
+            let totScore=0, totSec=0, sAcc=0, sKill=0, sDeath=0, sDmg=0, cnt=0;
+            const sel = document.getElementById(`p${pid}-select`);
+            const scoreEl = document.getElementById(`p${pid}-score`);
+            const prevScore = parseInt(scoreEl.innerText.replace(/\D/g,'')) || 0;
+
+            for(let c in chs) {
+                const d = chs[c];
+                cnt++;
+                totScore += getChapterScore(d);
+                totSec += (d.min*60)+d.sec;
+                sKill+=d.kills; sDeath+=d.deaths; sDmg+=d.dmg; sAcc+=d.acc;
+                for(let opt of sel.options) {
+                    if(opt.value === c) {
+                        const sd = d.sec<10?'0'+d.sec:d.sec;
+                        opt.text = `✔ ${c} [${d.min}:${sd}]`; opt.style.color = "#cfa85e";
+                    }
+                }
+            }
+
+            animateValue(scoreEl, prevScore, totScore, 1000);
+            const fm = Math.floor(totSec/60);
+            const fs = totSec%60;
+            document.getElementById(`p${pid}-time`).innerText = `${String(fm).padStart(2,'0')}:${String(fs).padStart(2,'0')}`;
+            document.getElementById(`p${pid}-acc`).innerText = cnt>0 ? (sAcc/cnt).toFixed(1)+'%' : '0%';
+            document.getElementById(`p${pid}-kills`).innerText = sKill;
+            document.getElementById(`p${pid}-deaths`).innerText = sDeath;
+            document.getElementById(`p${pid}-dmg`).innerText = sDmg;
+
+            const avg = cnt>0 ? totScore/cnt : 0;
+            let rank='-', cls='';
+            if(cnt>0) {
+                if(avg>=8000) { rank='S+'; cls='rank-s'; }
+                else if(avg>=6000) { rank='S'; cls='rank-s'; }
+                else if(avg>=4000) { rank='A'; cls='rank-a'; }
+                else if(avg>=2000) { rank='B'; cls='rank-b'; }
+                else { rank='C'; cls='rank-c'; }
+            }
+            const rEl = document.getElementById(`p${pid}-rank`);
+            rEl.innerText = rank;
+            rEl.className = `rank-badge ${cls}`;
+        }
+
+        /* --- HISTORY LOGIC --- */
+        function openHistory() {
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '';
+            
+            // Set Names Header
+            document.getElementById('side-p1-name').innerText = (document.getElementById('p1-name').value || "PLAYER 1").toUpperCase();
+            document.getElementById('side-p2-name').innerText = (document.getElementById('p2-name').value || "PLAYER 2").toUpperCase();
+
+            const chaptersList = Array.from({length: 16}, (_, i) => `Глава ${i+1}`);
+
+            chaptersList.forEach(ch => {
+                const d1 = db[1].chapters[ch];
+                const d2 = db[2].chapters[ch];
+                
+                const s1 = getChapterScore(d1);
+                const s2 = getChapterScore(d2);
+
+                let c1 = 'tbl-draw', c2 = 'tbl-draw';
+                if(s1 > s2) { c1 = 'tbl-win'; c2 = 'tbl-loss'; }
+                else if (s2 > s1) { c1 = 'tbl-loss'; c2 = 'tbl-win'; }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align:left; color:#666; font-size:0.9rem;">${ch}</td>
+                    <td class="${c1}">${d1 ? s1.toLocaleString() : '-'}</td>
+                    <td class="${c2}">${d2 ? s2.toLocaleString() : '-'}</td>
+                `;
+                
+                // Add Hover Event
+                row.onmouseenter = () => updateHistorySidebars(ch);
+
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('history-overlay').classList.add('active');
+            document.getElementById('history-modal').classList.add('active');
+        }
+
+        function updateHistorySidebars(ch) {
+            const d1 = db[1].chapters[ch];
+            const d2 = db[2].chapters[ch];
+            
+            const renderStats = (d, containerId) => {
+                const con = document.getElementById(containerId);
+                const panel = con.closest('.history-side-panel');
+                panel.classList.add('active');
+                
+                if(!d) {
+                    con.innerHTML = `<div style="text-align:center; color:#555; margin-top:50px;">NO DATA</div>`;
+                    return;
+                }
+
+                const timeStr = `${d.min}:${d.sec<10?'0'+d.sec:d.sec}`;
+                
+                con.innerHTML = `
+                    <div style="text-align:center; color:#888; font-size:0.8rem; margin-bottom:10px;">${ch}</div>
+                    <div class="detail-row"><span>Time</span><span>${timeStr}</span></div>
+                    <div class="detail-row hl"><span>Accuracy</span><span>${d.acc}%</span></div>
+                    <div class="detail-row"><span>Kills</span><span>${d.kills}</span></div>
+                    <div class="detail-row bad"><span>Deaths</span><span>${d.deaths}</span></div>
+                    <div class="detail-row bad"><span>Damage</span><span>${d.dmg}</span></div>
+                `;
+            };
+
+            renderStats(d1, 'side-p1-content');
+            renderStats(d2, 'side-p2-content');
+        }
+
+        function closeHistory() {
+            document.getElementById('history-overlay').classList.remove('active');
+            document.getElementById('history-modal').classList.remove('active');
+            // Reset sidebars visually
+            document.getElementById('side-p1').classList.remove('active');
+            document.getElementById('side-p2').classList.remove('active');
+        }
+
+        /* ============================
+           VICTORY LOGIC & ANIMATIONS
+           ============================ */
+        let confettiReqId = null;
+
+        function triggerVictorySequence() {
+            const overlay = document.getElementById('victory-overlay');
+            const status = document.getElementById('loading-text');
+            const wTitle = document.getElementById('winner-title');
+            const wName = document.getElementById('winner-name');
+            const wScore = document.getElementById('winner-score');
+
+            stopConfetti();
+            overlay.classList.remove('reveal');
+            overlay.classList.remove('closing');
+
+            wTitle.classList.add('force-hide');
+            wName.classList.add('force-hide');
+            wScore.classList.add('force-hide');
+
+            const s1 = parseInt(document.getElementById('p1-score').innerText.replace(/\D/g,''))||0;
+            const s2 = parseInt(document.getElementById('p2-score').innerText.replace(/\D/g,''))||0;
+            const n1 = document.getElementById('p1-name').value || "LEON";
+            const n2 = document.getElementById('p2-name').value || "KRAUSER";
+
+            let winnerName = "DRAW";
+            let winnerScoreText = `${s1} vs ${s2}`;
+            if (s1 > s2) { winnerName = n1; winnerScoreText = `FINAL SCORE: ${s1.toLocaleString()}`; }
+            else if (s2 > s1) { winnerName = n2; winnerScoreText = `FINAL SCORE: ${s2.toLocaleString()}`; }
+
+            wName.innerText = winnerName;
+            wScore.innerText = winnerScoreText;
+            status.style.display = 'block';
+            status.innerText = "CONNECTING TO SERVERS...";
+            
+            overlay.classList.add('visible');
+
+            setTimeout(() => {
+                wTitle.classList.remove('force-hide');
+                wName.classList.remove('force-hide');
+                wScore.classList.remove('force-hide');
+            }, 100);
+
+            setTimeout(() => { status.innerText = "ANALYZING BATTLE DATA..."; }, 1000);
+            setTimeout(() => { status.innerText = "CALCULATING EFFICIENCY..."; }, 2000);
+            setTimeout(() => {
+                overlay.classList.add('reveal');
+                startConfetti();
+            }, 3000);
+        }
+
+        function closeVictory() {
+            const overlay = document.getElementById('victory-overlay');
+            overlay.classList.add('closing'); 
+            setTimeout(() => {
+                overlay.classList.remove('visible');
+                overlay.classList.remove('closing');
+                stopConfetti();
+            }, 1000);
+        }
+
+        /* ============================
+           CANVAS CONFETTI ENGINE
+           ============================ */
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createParticle() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height, 
+                size: Math.random() * 8 + 4,
+                color: Math.random() > 0.5 ? '#cfa85e' : '#bb0a1e', 
+                speedY: Math.random() * 3 + 2,
+                speedX: Math.random() * 2 - 1,
+                rotation: Math.random() * 360,
+                rotationSpeed: Math.random() * 5 - 2
+            };
+        }
+
+        function updateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, index) => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+                p.rotation += p.rotationSpeed;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                ctx.restore();
+                if (p.y > canvas.height) {
+                    particles[index] = createParticle();
+                    particles[index].y = -20;
+                }
+            });
+            confettiReqId = requestAnimationFrame(updateParticles);
+        }
+
+        function startConfetti() {
+            stopConfetti(); 
+            particles = [];
+            for(let i=0; i<150; i++) particles.push(createParticle());
+            updateParticles();
+        }
+
+        function stopConfetti() {
+            if (confettiReqId) cancelAnimationFrame(confettiReqId);
+            confettiReqId = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    </script>
+</body>
+</html>
